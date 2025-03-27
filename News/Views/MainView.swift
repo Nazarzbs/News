@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct MainView: View {
-    @State private var viewModel = NewsAPIService(apiKey: "d30476204fc74acba24fc4b9680dac1d")
+    var viewModel: NewsViewModel
     @State private var searchText = ""
     
     var body: some View {
@@ -18,7 +18,7 @@ struct MainView: View {
                     .onAppear {
                         if article.id == viewModel.articles.last?.id {
                             Task {
-                                await viewModel.loadNextPage()
+                                await viewModel.loadMore()
                             }
                         }
                     }
@@ -28,7 +28,7 @@ struct MainView: View {
             .searchable(text: $searchText, prompt: "Search news, for example: 'ukraine'")
             .onSubmit(of: .search) {
                 Task {
-                    await viewModel.refresh(query: searchText)  // Pass searchText here
+                    await viewModel.search(query: searchText)  // Pass searchText here
                 }
             }
             .overlay {
@@ -41,7 +41,7 @@ struct MainView: View {
         }
         .task {
             // Load initial data with default "ukraine" query
-            await viewModel.searchArticles()
+            await viewModel.search()
         }
     }
 }

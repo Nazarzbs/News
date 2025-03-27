@@ -1,106 +1,29 @@
 //
-//  NewsViewModel.swift
+//  NewsViewModel 2.swift
 //  News
 //
-//  Created by Nazar on 26/3/25.
+//  Created by Nazar on 27/3/25.
 //
 
 import SwiftUI
-import SwiftData
 
 @Observable
-final class NewsAPIService {
-    private let apiKey: String
-    private let baseURL = "https://newsapi.org/v2"
+final class NewsViewModel {
+    private let newsService: NewsAPIService
     
-    var articles: [Article] = []
-    var isLoading = false
-    var errorMessage: String?
-    var currentPage = 1
-    var totalResults = 0
-    
-    // Store the last search query
-    private var lastQuery = "ukraine"
+    var articles: [Article] { newsService.articles }
+    var isLoading: Bool { newsService.isLoading }
+    var errorMessage: String? { newsService.errorMessage }
     
     init(apiKey: String) {
-        self.apiKey = apiKey
+        newsService = NewsAPIService(apiKey: apiKey)
     }
     
-    func searchArticles(
-        query: String? = nil,
-        pageSize: Int = 20
-    ) async {
-        guard !isLoading else { return }
-        
-        isLoading = true
-        errorMessage = nil
-        
-        // Update the last query if a new one is provided
-        if let query = query, !query.isEmpty {
-            lastQuery = query
-        }
-        
-        var components = URLComponents(string: "\(baseURL)/everything")!
-        components.queryItems = [
-            URLQueryItem(name: "apiKey", value: apiKey),
-            URLQueryItem(name: "q", value: lastQuery), // Always include a query
-            URLQueryItem(name: "pageSize", value: "\(pageSize)"),
-            URLQueryItem(name: "page", value: "\(currentPage)")
-        ]
-        
-        guard let url = components.url else {
-            errorMessage = "Invalid URL"
-            isLoading = false
-            return
-        }
-        
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let response = try JSONDecoder().decode(NewsAPIResponse.self, from: data)
-            
-            // Check for API errors
-            if response.status == "error" {
-                throw NewsAPIError.apiError(response.message ?? "Unknown API error")
-            }
-            
-            await MainActor.run {
-                if currentPage == 1 {
-                    articles = response.articles
-                } else {
-                    articles.append(contentsOf: response.articles)
-                }
-                totalResults = response.totalResults
-            }
-        } catch {
-            await MainActor.run {
-                errorMessage = error.localizedDescription
-            }
-        }
-        
-        isLoading = false
+    func search(query: String? = nil) async {
+        await newsService.refresh(query: query)
     }
     
-    func loadNextPage() async {
-            currentPage += 1
-            await searchArticles() // Uses lastQuery
-        }
-    
-    func refresh(query: String? = nil) async {
-            currentPage = 1
-            await searchArticles(query: query)
-        }
-}
-
-// MARK: - Error Handling
-
-enum NewsAPIError: Error {
-    case apiError(String)
-    
-    var localizedDescription: String {
-        switch self {
-        case .apiError(let message):
-            return message
-        }
+    func loadMore() async {
+        await newsService.loadNextPage()
     }
 }
-
