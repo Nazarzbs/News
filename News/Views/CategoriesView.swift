@@ -9,25 +9,25 @@ import SwiftUI
 
 struct CategoriesView: View {
     var viewModel: NewsCategoriesViewModel
-    @State private var selectedCategory: NewsCategory? = NewsCategory.all
+    @State private var selectedCategory: NewsCategory = .all
+    @Namespace private var animationNamespace
     
     let categories: [NewsCategory] = NewsCategory.allCases
     
     var body: some View {
         NavigationStack {
-            VStack {
+            VStack(spacing: 0) {
                 // Category Selection List
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         ForEach(categories, id: \.self) { category in
                             CategoryChip(
                                 category: category,
-                                isSelected: selectedCategory == category
+                                isSelected: selectedCategory == category,
+                                namespace: animationNamespace
                             )
                             .onTapGesture {
-                                if selectedCategory == category {
-                                    selectedCategory = nil
-                                } else {
+                                withAnimation(.smooth) {
                                     selectedCategory = category
                                 }
                                 Task {
@@ -36,28 +36,33 @@ struct CategoriesView: View {
                             }
                         }
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemGroupedBackground))
                 }
+                .background(Color(.systemGroupedBackground))
                 
                 Divider()
                 
                 // Articles List
                 if viewModel.isLoading {
-                    Spacer()
                     ProgressView("Loading articles...")
-                    Spacer()
+                        .frame(maxHeight: .infinity)
                 } else if viewModel.headlines.isEmpty {
-                    Spacer()
-                    Text("No articles found")
-                        .foregroundStyle(.gray)
-                    Spacer()
+                    ContentUnavailableView(
+                        "No Articles",
+                        systemImage: "newspaper",
+                        description: Text("There are no articles in this category.")
+                    )
                 } else {
-                    ScrollView {
-                        
-                        ForEach(viewModel.headlines) { article in
-                            ArticleRow(article: article)
-                        }
-                        .padding()
+                    List(viewModel.headlines) { article in
+                        ArticleRow(article: article)
+                            .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
+                            .listRowSeparator(.hidden)
+                    }
+                    .listStyle(.plain)
+                    .refreshable {
+                        await viewModel.fetchHeadlines(category: selectedCategory)
                     }
                 }
             }
@@ -67,7 +72,15 @@ struct CategoriesView: View {
                     await viewModel.fetchHeadlines(category: selectedCategory)
                 }
             }
-            .navigationTitle("News Categories")
+            .navigationTitle("News")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("News")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                }
+            }
         }
     }
 }
@@ -77,24 +90,44 @@ struct CategoriesView: View {
 struct CategoryChip: View {
     let category: NewsCategory
     let isSelected: Bool
+    var namespace: Namespace.ID
     
     var body: some View {
-        HStack {
-            Image(systemName: category.iconName)
-                .foregroundColor(.white)
+        VStack(spacing: 0) {
+            HStack {
+                Image(systemName: category.iconName)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(isSelected ? .white : category.color)
+                
+                if isSelected {
+                    Text(category.displayName)
+                        .font(.system(size: 14, weight: .medium))
+
+                }
+                                      
+            }
+            .animation(nil, value: isSelected)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(
+                Group {
+                    if isSelected {
+                        Capsule()
+                            .fill(category.color.gradient)
+                            .matchedGeometryEffect(id: "categoryBackground", in: namespace)
+                    } else {
+                        Capsule()
+                            .fill(Color(.secondarySystemGroupedBackground))
+                    }
+                }
+            )
+            .foregroundColor(isSelected ? .white : .primary)
+            .overlay(
+                Capsule()
+                    .stroke(isSelected ? Color.clear : Color(.separator), lineWidth: 1)
+            )
             
-            Text(category.displayName)
-                .font(.system(size: 16, weight: .medium))
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(isSelected ? category.color : .gray.opacity(0.3))
-        .foregroundColor(isSelected ? .white : .black)
-        .clipShape(Capsule())
-        .overlay(
-            Capsule().stroke(Color.gray, lineWidth: isSelected ? 0 : 1)
-        )
-        .animation(.easeInOut, value: isSelected)
     }
 }
 
