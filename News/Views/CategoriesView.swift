@@ -16,8 +16,9 @@ struct CategoriesView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Category Selection List
+            
+            // Category Selection Section
+            Section {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         ForEach(categories, id: \.self) { category in
@@ -38,33 +39,35 @@ struct CategoriesView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
-                    .background(Color(.systemGroupedBackground))
                 }
-                .background(Color(.systemGroupedBackground))
+            }
+            
+            List {
                 
-                Divider()
-                
-                // Articles List
+                // Articles List Section
                 if viewModel.isLoading {
-                    ProgressView("Loading articles...")
-                        .frame(maxHeight: .infinity)
-                } else if viewModel.headlines.isEmpty {
-                    ContentUnavailableView(
-                        "No Articles",
-                        systemImage: "newspaper",
-                        description: Text("There are no articles in this category.")
-                    )
-                } else {
-                    List(viewModel.headlines) { article in
-                        ArticleRow(article: article)
-                            .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
+                        ProgressView("Loading articles...")
+                            .frame(maxWidth: .infinity, alignment: .center)
                             .listRowSeparator(.hidden)
-                    }
-                    .listStyle(.plain)
-                    .refreshable {
-                        await viewModel.fetchHeadlines(category: selectedCategory)
+                } else if viewModel.headlines.isEmpty {
+                        ContentUnavailableView(
+                            "No Articles",
+                            systemImage: "newspaper",
+                            description: Text("There are no articles in this category.")
+                             
+                        )
+                        .listRowSeparator(.hidden)
+                } else {
+                        ForEach(viewModel.headlines) { article in
+                            ArticleRow(article: article)
+                               
+                                .listRowSeparator(.hidden)
                     }
                 }
+            }
+            .listStyle(.plain)
+            .refreshable {
+                await viewModel.fetchHeadlines(category: selectedCategory)
             }
             .onAppear {
                 print("CategoriesView: onAppear")
