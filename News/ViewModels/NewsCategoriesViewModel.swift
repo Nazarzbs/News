@@ -7,10 +7,9 @@
 
 import SwiftUI
 
-@Observable
 final class NewsCategoriesViewModel {
     private let apiService: NewsCategoriesAPIService
-    
+
     var headlines: [Article] { apiService.headlines }
     var isLoading: Bool { apiService.isLoading }
     var errorMessage: String? { apiService.errorMessage }

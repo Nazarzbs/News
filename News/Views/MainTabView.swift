@@ -9,8 +9,8 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @State private var mainViewModel = NewsViewModel(apiKey: "d30476204fc74acba24fc4b9680dac1d")
-    @State private var categoriesViewModel = NewsCategoriesViewModel(apiKey: "d30476204fc74acba24fc4b9680dac1d")
+    private let mainViewModel = NewsViewModel(apiKey: "9926542fd1f14b25bb36ec022dfe345f")
+    private let categoriesViewModel = NewsCategoriesViewModel(apiKey: "9926542fd1f14b25bb36ec022dfe345f")
     
     var body: some View {
         TabView {

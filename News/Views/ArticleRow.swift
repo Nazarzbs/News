@@ -15,18 +15,27 @@ struct ArticleRow: View {
         VStack(alignment: .leading, spacing: 8) {
             // Image at the top
             if let imageUrl = article.urlToImage, let url = URL(string: imageUrl) {
-                AsyncImage(url: url) { image in
-                    image
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: imageWidth)
-                        .clipped()
-                    
-                } placeholder: {
-                    ProgressView()
-                        .frame(width: imageWidth, height: 200)
-                        .aspectRatio(16/9, contentMode: .fit)
-                        .background(Color.gray.opacity(0.3))
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView()
+                            .frame(width: imageWidth, height: 200)
+                            .aspectRatio(16/9, contentMode: .fit)
+                            .background(Color.gray.opacity(0.3))
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: imageWidth)
+                            .clipped()
+                    case .failure:
+                        Image(systemName: "photo")
+                            .frame(width: imageWidth, height: 200)
+                            .aspectRatio(16/9, contentMode: .fit)
+                            .background(Color.gray.opacity(0.3))
+                    @unknown default:
+                        EmptyView()
+                    }
                 }
                 .frame(maxWidth: imageWidth)
             }

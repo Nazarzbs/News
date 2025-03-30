@@ -13,34 +13,42 @@ struct MainView: View {
     
     var body: some View {
         NavigationStack {
-            List(viewModel.articles) { article in
-                ArticleRow(article: article)
-                    .onAppear {
-                        if article.id == viewModel.articles.last?.id {
-                            Task {
-                                await viewModel.loadMore()
-                            }
-                        }
+            NewsListView(viewModel: viewModel)
+                .listStyle(.plain)
+                .navigationTitle("News")
+                .searchable(text: $searchText, prompt: "Search news, for example: 'ukraine'")
+                .onSubmit(of: .search) {
+                    Task {
+                        await viewModel.search(query: searchText)
                     }
-            }
-            .listStyle(.plain)
-            .navigationTitle("News")
-            .searchable(text: $searchText, prompt: "Search news, for example: 'ukraine'")
-            .onSubmit(of: .search) {
-                Task {
-                    await viewModel.search(query: searchText)
                 }
-            }
-            .overlay {
-                if viewModel.isLoading && viewModel.articles.isEmpty {
-                    ProgressView()
-                } else if viewModel.articles.isEmpty && !viewModel.isLoading {
-                    ContentUnavailableView.search(text: searchText)
+                .overlay {
+                    if viewModel.isLoading && viewModel.articles.isEmpty {
+                        ProgressView()
+                    } else if viewModel.articles.isEmpty && !viewModel.isLoading {
+                        ContentUnavailableView.search(text: searchText)
+                    }
                 }
-            }
         }
         .task {
             await viewModel.search()
+        }
+    }
+}
+
+private struct NewsListView: View {
+    let viewModel: NewsViewModel
+    
+    var body: some View {
+        List(viewModel.articles) { article in
+            ArticleRow(article: article)
+                .onAppear {
+                    if article.id == viewModel.articles.last?.id {
+                        Task {
+                            await viewModel.loadMore()
+                        }
+                    }
+                }
         }
     }
 }
