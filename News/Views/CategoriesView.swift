@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct CategoriesView: View {
-    var viewModel: NewsCategoriesViewModel
+    var viewModel: NewsCategoriesAPIService
     @State private var selectedCategory: NewsCategory = .all
     @Namespace private var animationNamespace
     
@@ -32,7 +32,7 @@ struct CategoriesView: View {
                                     selectedCategory = category
                                 }
                                 Task {
-                                    await viewModel.fetchHeadlines(category: category)
+                                    await viewModel.filterByCategory(category)
                                 }
                             }
                         }
@@ -67,12 +67,12 @@ struct CategoriesView: View {
             }
             .listStyle(.plain)
             .refreshable {
-                await viewModel.fetchHeadlines(category: selectedCategory)
+                await viewModel.filterByCategory(selectedCategory)
             }
             .onAppear {
                 print("CategoriesView: onAppear")
                 Task {
-                    await viewModel.fetchHeadlines(category: selectedCategory)
+                    await viewModel.filterByCategory(selectedCategory)
                 }
             }
             .navigationTitle("News")
