@@ -40,15 +40,23 @@ private struct NewsListView: View {
     let viewModel: NewsAPIService
     
     var body: some View {
-        List(viewModel.articles) { article in
-            ArticleRow(article: article)
-                .onAppear {
-                    if article.id == viewModel.articles.last?.id {
-                        Task {
-                            await viewModel.loadNextPage()
+        List {
+            ForEach(viewModel.articles) { article in
+                ArticleRow(article: article)
+            }
+            
+            if !viewModel.articles.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .listRowSeparator(.hidden)
+                    .onAppear {
+                        if !viewModel.isLoading {
+                            Task {
+                                await viewModel.loadNextPage()
+                            }
                         }
                     }
-                }
+            }
         }
     }
 }

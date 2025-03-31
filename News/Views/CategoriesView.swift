@@ -60,9 +60,21 @@ struct CategoriesView: View {
                 } else {
                         ForEach(viewModel.headlines) { article in
                             ArticleRow(article: article)
-                               
                                 .listRowSeparator(.hidden)
-                    }
+                        }
+                        
+                        if !viewModel.headlines.isEmpty {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .listRowSeparator(.hidden)
+                                .onAppear {
+                                    if !viewModel.isLoading {
+                                        Task {
+                                            await viewModel.loadNextPage()
+                                        }
+                                    }
+                                }
+                        }
                 }
             }
             .listStyle(.plain)
