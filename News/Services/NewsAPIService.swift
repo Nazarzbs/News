@@ -21,6 +21,7 @@ final class NewsAPIService {
     
     // Store the last search query
     private var lastQuery = "ukraine"
+    private let cacheService = CacheService.shared
     
     init(apiKey: String) {
         self.apiKey = apiKey
@@ -41,10 +42,21 @@ final class NewsAPIService {
             lastQuery = query
         }
         
+        // Try to load from cache first if it's the first page
+        if currentPage == 1 {
+            if let cachedResponse: NewsAPIResponse = try? await cacheService.retrieve(forKey: "search_\(lastQuery)") {
+                await MainActor.run {
+                    articles = cachedResponse.articles
+                    totalResults = cachedResponse.totalResults
+                    isLoading = false
+                }
+            }
+        }
+        
         var components = URLComponents(string: "\(baseURL)/everything")!
         components.queryItems = [
             URLQueryItem(name: "apiKey", value: apiKey),
-            URLQueryItem(name: "q", value: lastQuery), // Always include a query
+            URLQueryItem(name: "q", value: lastQuery),
             URLQueryItem(name: "pageSize", value: "\(pageSize)"),
             URLQueryItem(name: "page", value: "\(currentPage)")
         ]
@@ -59,7 +71,6 @@ final class NewsAPIService {
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try JSONDecoder().decode(NewsAPIResponse.self, from: data)
             
-            // Check for API errors
             if response.status == "error" {
                 throw NewsAPIError.apiError(response.message ?? "Unknown API error")
             }
@@ -67,6 +78,10 @@ final class NewsAPIService {
             await MainActor.run {
                 if currentPage == 1 {
                     articles = response.articles
+                    // Cache the first page response
+                    Task {
+                        try? await cacheService.cache(response, forKey: "search_\(lastQuery)")
+                    }
                 } else {
                     articles.append(contentsOf: response.articles)
                 }
@@ -82,14 +97,14 @@ final class NewsAPIService {
     }
     
     func loadNextPage() async {
-            currentPage += 1
-            await searchAllArticles() // Uses lastQuery
-        }
+        currentPage += 1
+        await searchAllArticles()
+    }
     
     func refresh(query: String? = nil) async {
-            currentPage = 1
-            await searchAllArticles(query: query)
-        }
+        currentPage = 1
+        await searchAllArticles(query: query)
+    }
 }
 
 // MARK: - Error Handling

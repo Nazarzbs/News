@@ -23,6 +23,7 @@ final class NewsCategoriesAPIService {
     private var lastCategory: String?
     private var lastCountry: String?
     private var lastQuery: String?
+    private let cacheService = CacheService.shared
     
     init(apiKey: String) {
         self.apiKey = apiKey
@@ -45,6 +46,18 @@ final class NewsCategoriesAPIService {
         lastCountry = country
         lastQuery = query
         
+        // Try to load from cache first if it's the first page
+        if currentPage == 1 {
+            let cacheKey = "headlines_\(category ?? "all")_\(country ?? "us")"
+            if let cachedResponse: NewsAPIResponse = try? await cacheService.retrieve(forKey: cacheKey) {
+                await MainActor.run {
+                    headlines = cachedResponse.articles
+                    totalResults = cachedResponse.totalResults
+                    isLoading = false
+                }
+            }
+        }
+        
         var components = URLComponents(string: "\(baseURL)/top-headlines")!
         components.queryItems = [
             URLQueryItem(name: "apiKey", value: apiKey),
@@ -53,8 +66,8 @@ final class NewsCategoriesAPIService {
         ]
         
         if let category = category, category != "all", !category.isEmpty {
-               components.queryItems?.append(URLQueryItem(name: "category", value: category))
-           }
+            components.queryItems?.append(URLQueryItem(name: "category", value: category))
+        }
         
         if let country = country, !country.isEmpty {
             components.queryItems?.append(URLQueryItem(name: "country", value: country))
@@ -81,6 +94,11 @@ final class NewsCategoriesAPIService {
             await MainActor.run {
                 if currentPage == 1 {
                     headlines = response.articles
+                    // Cache the first page response
+                    Task {
+                        let cacheKey = "headlines_\(category ?? "all")_\(country ?? "us")"
+                        try? await cacheService.cache(response, forKey: cacheKey)
+                    }
                 } else {
                     headlines.append(contentsOf: response.articles)
                 }
